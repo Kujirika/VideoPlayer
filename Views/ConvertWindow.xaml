@@ -1,0 +1,54 @@
+﻿<Window x:Class="MinimalPlayback.Views.ConvertWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Перекодирование видео"
+        Height="260"
+        Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Выбор файла -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
+            <TextBox x:Name="FilePathBox"
+                     Width="330"
+                     IsReadOnly="True"
+                     Margin="0,0,10,0"/>
+            <Button Content="Обзор"
+                    Width="100"
+                    Click="Browse_Click"/>
+        </StackPanel>
+
+        <!-- Выбор кодека -->
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="Кодек:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <ComboBox x:Name="CodecCombo"
+                      Width="200">
+                <ComboBoxItem Content="H.264 (x264)"/>
+                <ComboBoxItem Content="H.265 (x265)"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Кнопка запуска -->
+        <Button Grid.Row="2"
+                Content="Начать перекодирование"
+                Height="35"
+                Click="StartConvert_Click"/>
+
+        <!-- Статус -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Row="3"
+                   Margin="0,15,0,0"
+                   Text="Ожидание..."
+                   TextWrapping="Wrap"/>
+    </Grid>
+</Window>
