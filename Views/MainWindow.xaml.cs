@@ -1,26 +1,30 @@
 ﻿using MinimalPlayback.Controllers;
 using MinimalPlayback.Helpers;
 using MinimalPlayback.Services;
+using MinimalPlayback.Views;
 using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using MinimalPlayback.Views;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace MinimalPlayback.Views
 {
     public partial class MainWindow : Window
     {
+        private List<string> playlist = new List<string>();
+        private int currentIndex = -1;
+
         private readonly VlcPlayerService _player;
-        private readonly TimelineController _timeline;
+        private readonly TimelineState _timeline;
 
         public MainWindow()
         {
             InitializeComponent();
 
             _player = new VlcPlayerService();
-            _timeline = new TimelineController();
+            _timeline = new TimelineState();
 
             videoView.MediaPlayer = _player.MediaPlayer;
 
@@ -30,11 +34,11 @@ namespace MinimalPlayback.Views
         }
 
         // ===== СОБЫТИЯ ПЛЕЕРА =====
-        private void OnTimeChanged(long time)
+        private void OnTimeChanged(long time) 
         {
             Dispatcher.Invoke(() =>
             {
-                if (!_timeline.IsDragging)
+                if (Math.Abs(Slider.Value - time) > 500) // Чтобы слайдер не обновлялся каждую мс, а раз в 500мс.
                     Slider.Value = time;
 
                 CurrentTimeText.Text = TimeFormatter.Format(time);
@@ -52,12 +56,9 @@ namespace MinimalPlayback.Views
 
         private void OnEndReached()
         {
-            Dispatcher.BeginInvoke(() =>
+            Dispatcher.Invoke(() =>
             {
-                _player.Stop();
-                Slider.Value = 0;
-                PlayPauseBtn.Content = "Play";
-                CurrentTimeText.Text = "00:00";
+                PlayNextVideo();
             });
         }
 
@@ -73,21 +74,35 @@ namespace MinimalPlayback.Views
             _player.SetTime((long)Slider.Value);
         }
 
+        private void Slider_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(Slider).X;
+
+            var time = TimelineMath.CalculateTime(
+                pos,
+                Slider.ActualWidth,
+                Slider.Maximum
+            );
+
+            Slider.Value = time;
+            _player.SetTime(time);
+        }
+
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (!_timeline.IsDragging) return;
+            if (!_timeline.IsDragging)
+                return;
 
-            var snapped = _timeline.SnapToSeconds(Slider.Value);
-            _player.SetTime(snapped);
+            CurrentTimeText.Text = TimeFormatter.Format((long)Slider.Value);
         }
 
         private void Slider_MouseMove(object sender, MouseEventArgs e)
         {
-            var preview = _timeline.CalculateTime(
-                e.GetPosition(Slider).X,
-                Slider.ActualWidth,
-                Slider.Maximum
-            );
+            var preview = TimelineMath.CalculateTime(
+            e.GetPosition(Slider).X,
+            Slider.ActualWidth,
+            Slider.Maximum
+             );
 
             Slider.ToolTip = TimeFormatter.Format(preview);
         }
@@ -113,6 +128,27 @@ namespace MinimalPlayback.Views
                 button.Content = "Pause";
             }
         }
+        private void MediaPlayer_EndReached(object sender, EventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                PlayNextVideo();
+            });
+        }
+        private void PlayNextVideo()
+        {
+            if (playlist.Count == 0)
+                return;
+
+            currentIndex++;
+
+            if (currentIndex >= playlist.Count)
+                currentIndex = 0; // зацикливание
+
+            PlaylistListBox.SelectedIndex = currentIndex;
+
+            _player.PlayVideo(playlist[currentIndex]);
+        }
 
         private void Browse_Click(object sender, RoutedEventArgs e)
         {
@@ -122,7 +158,18 @@ namespace MinimalPlayback.Views
             };
 
             if (dialog.ShowDialog() == true)
-                _player.Play(dialog.FileName);
+            {
+                playlist.Clear();
+                playlist.Add(dialog.FileName);
+
+                currentIndex = 0;
+
+                PlaylistListBox.Items.Clear();
+                PlaylistListBox.Items.Add(System.IO.Path.GetFileName(dialog.FileName));
+                PlaylistListBox.SelectedIndex = 0;
+
+                _player.PlayVideo(dialog.FileName);
+            }
         }
 
         private void PlaylistBtn_Click(object sender, RoutedEventArgs e)
@@ -144,20 +191,35 @@ namespace MinimalPlayback.Views
         private void LoadPlaylist(string folder)
         {
             PlaylistListBox.Items.Clear();
+            playlist.Clear();
+
             var files = Directory.GetFiles(folder, "*.*");
+
             foreach (var f in files)
             {
                 if (f.EndsWith(".mp4") || f.EndsWith(".mkv") || f.EndsWith(".avi") || f.EndsWith(".mov"))
-                    PlaylistListBox.Items.Add(f);
+                {
+                    playlist.Add(f);
+                    PlaylistListBox.Items.Add(System.IO.Path.GetFileName(f));
+                }
+            }
+
+            if (playlist.Count > 0)
+            {
+                currentIndex = 0;
+                PlaylistListBox.SelectedIndex = 0;
+                _player.PlayVideo(playlist[currentIndex]);
             }
         }
 
         private void PlaylistListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (PlaylistListBox.SelectedItem != null)
-            {
-                _player.Play(PlaylistListBox.SelectedItem.ToString());
-            }
+            if (PlaylistListBox.SelectedIndex < 0)
+                return;
+
+            currentIndex = PlaylistListBox.SelectedIndex;
+
+            _player.PlayVideo(playlist[currentIndex]);
         }
 
         protected override void OnClosed(EventArgs e)

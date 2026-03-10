@@ -56,6 +56,7 @@
                         ValueChanged="Slider_ValueChanged"
                         PreviewMouseDown="Slider_PreviewMouseDown"
                         PreviewMouseUp="Slider_PreviewMouseUp"
+                        MouseLeftButtonDown="Slider_MouseLeftButtonDown"
                         MouseMove="Slider_MouseMove"
                         MouseLeave="Slider_MouseLeave"
                         ToolTipService.InitialShowDelay="0"
@@ -70,7 +71,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Правая часть -->
+        <!-- Правая часть. Плейлист -->
         <ListBox x:Name="PlaylistListBox"
                  Grid.Column="1"
                  Margin="5"

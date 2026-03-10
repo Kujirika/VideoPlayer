@@ -51,10 +51,6 @@ namespace MinimalPlayback.Views
                     suffix = "_265.mp4";
                     break;
 
-                case "libvpx-vp9":
-                    suffix = "_vp9.webm";
-                    break;
-
                 default:
                     throw new Exception("Неизвестный кодек");
             }

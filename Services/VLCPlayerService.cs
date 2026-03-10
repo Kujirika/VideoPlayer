@@ -8,6 +8,7 @@ namespace MinimalPlayback.Services
         private readonly LibVLC _libVLC;
         private readonly MediaPlayer _mediaPlayer;
 
+        public bool IsPlaying => _mediaPlayer.IsPlaying;
         public MediaPlayer MediaPlayer => _mediaPlayer;
 
         public event Action<long>? TimeChanged;
@@ -26,14 +27,29 @@ namespace MinimalPlayback.Services
             _mediaPlayer.EndReached += (s, e) => EndReached?.Invoke();
         }
 
-        public void Play(string path)
+        public void PlayVideo(string path)
         {
-            var media = new Media(_libVLC, path, FromType.FromPath);
-            _mediaPlayer.Play(media);
+            if (string.IsNullOrWhiteSpace(path)) //Проверка на пустой путь.
+                return;
+
+            _mediaPlayer.Stop(); // Иногда VLC держит старое состояние. Остановка старого видео перед новым, чтобы память не ело.
+
+            using (var media = new Media(_libVLC, path)) // using автоматически освобождает память
+            {
+                _mediaPlayer.Play(media);
+            }
         }
 
-        public void Pause() => _mediaPlayer.Pause();
-        public void Resume() => _mediaPlayer.Play();
+        public void Pause()
+        {
+            if (_mediaPlayer.IsPlaying)
+                _mediaPlayer.Pause();
+        }
+        public void Resume()
+        {
+            if (!_mediaPlayer.IsPlaying)
+                _mediaPlayer.Play();
+        }
         public void Stop() => _mediaPlayer.Stop();
 
         public void SetTime(long ms) => _mediaPlayer.Time = ms;
